@@ -1,5 +1,6 @@
-package org.example.messageservice.entity;
+package org.example.messageservice.repository;
 
+import org.example.messageservice.event.OutboxEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

@@ -1,4 +1,4 @@
-package org.example.messageservice.entity;
+package org.example.messageservice.event;
 
 import jakarta.persistence.*;
 import lombok.Getter;
