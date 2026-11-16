@@ -1,2 +1,13 @@
 syntax = "proto3";
 option java_package = "org.example.grpc";
+
+service UserService {
+  rpc GetUser (GetUserRequest)
+      returns (UserResponse);
+}
+
+message GetUserRequest  {int64 user_id = 1;}
+message UserResponse {
+  int64  user_id = 1;
+  string display_name = 2;
+}
