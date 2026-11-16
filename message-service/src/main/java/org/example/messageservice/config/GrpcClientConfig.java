@@ -1,6 +1,7 @@
 package org.example.messageservice.config;
 
 import lombok.RequiredArgsConstructor;
+import org.example.grpc.UserServiceGrpc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.grpc.client.GrpcChannelFactory;
