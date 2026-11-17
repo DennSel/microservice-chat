@@ -43,3 +43,11 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       USER_SERVICE_HOST: user-service
       USER_SERVICE_GRPC_PORT: 9090
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      USER_SERVICE_URL: http://user-service:8082
+      JWT_SECRET: ${JWT_SECRET}
