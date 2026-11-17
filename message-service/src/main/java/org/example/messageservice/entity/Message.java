@@ -21,8 +21,7 @@ public class Message {
     private String body;
     private LocalDateTime createdAt;
 
-    public Message(String channelId, Long senderId,
-                   String body) {
+    public Message(String channelId, Long senderId, String body) {
         this.channelId = channelId;
         this.senderId = senderId;
         this.body = body;
