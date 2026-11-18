@@ -17,13 +17,19 @@ public class MessageController {
 
     private final MessageService messageService;
 
-    // TEMPORARY! senderId is client-supplied, impersonation possible.
-    // Replaced by trusted X-User-Id header when BFF is implemented.
+    // Trust the identity from the BFF when present, body senderId is
+    // only a fallback for direct tests against this service (bypassing the BFF).
     @PostMapping
-    public ResponseEntity<MessageDTO> post(@RequestBody CreateMessageDTO dto) {
+    public ResponseEntity<MessageDTO> post(
+            @RequestHeader(value = "X-User-Id", required = false) Long headerUserId,
+            @RequestBody CreateMessageDTO dto) {
+
+        Long senderId = (headerUserId != null)
+                ? headerUserId : dto.senderId();
+
         return ResponseEntity.status(201)
                 .body(messageService.postMessage(
-                        dto.channelId(), dto.senderId(), dto.body()));
+                        dto.channelId(), senderId, dto.body()));
     }
 
     @GetMapping
