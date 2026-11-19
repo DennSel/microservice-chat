@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat Lab</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #e9ecf3;
+      color: #222;
+      padding: 1.5rem;
+    }
+
+    [v-cloak] {
+      display: none;
+    }
+
+    #app {
+      height: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .box {
+      height: 100%;
+      display: flex;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    input,
+    button {
+      font: inherit;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid #d5d9e2;
+      border-radius: 8px;
+    }
+
+    button {
+      background: #5468ff;
+      border-color: #5468ff;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    a {
+      color: #5468ff;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    .status {
+      margin: 0;
+      min-height: 1.2em;
+      font-size: 0.9rem;
+      color: #1f9d55;
+    }
+
+    .error {
+      color: #d93c3c;
+    }
+
+    .auth {
+      margin: auto;
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    aside {
+      width: 200px;
+      padding: 1rem;
+      background: #1e2233;
+      color: #c9cfe0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    aside ul {
+      flex: 1;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      overflow-y: auto;
+    }
+
+    aside li {
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    aside li::before {
+      content: "#";
+      margin-right: 0.3rem;
+      opacity: 0.5;
+    }
+
+    aside li.active {
+      background: #343a5c;
+      color: #fff;
+    }
+
+    aside input {
+      width: 100%;
+      background: #2b3050;
+      border: 0;
+      color: #fff;
+    }
+
+    main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      margin: 0;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #e5e8ef;
+      font-size: 1.1rem;
+    }
+
+    h2 small {
+      margin-left: 0.75rem;
+      font-weight: normal;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 1rem 1.25rem;
+      overflow-y: auto;
+    }
+
+    .messages p {
+      margin: 0 0 0.7rem;
+      overflow-wrap: anywhere;
+    }
+
+    .messages b {
+      color: #5468ff;
+    }
+
+    .composer {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      border-top: 1px solid #e5e8ef;
+    }
+
+    .composer input {
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body>
+<div id="app" v-cloak>
+  <div class="box">
+
+    <form v-if="!token" class="auth" @submit.prevent="submitAuth">
+      <h1>Chat Lab</h1>
+
+      <input
+        v-if="mode === 'register'"
+        v-model="form.displayName"
+        placeholder="Visningsnamn"
+      >
+      <input
+        v-model="form.email"
+        type="email"
+        placeholder="E-post"
+      >
+      <input
+        v-model="form.password"
+        type="password"
+        placeholder="Lösenord"
+      >
+
+      <button :disabled="busy">
+        {{ mode === 'login' ? 'Logga in' : 'Registrera' }}
+      </button>
+
+      <p class="status" :class="{ error }">
+        {{ error || info }}
+      </p>
+
+      <a href="#" @click.prevent="toggleMode">
+        {{ mode === 'login' ? 'Inget konto? Registrera dig' : 'Har du konto? Logga in' }}
+      </a>
+    </form>
+
+    <template v-else>
+      <aside>
+        <ul>
+          <li
+            v-for="c in channels"
+            :key="c"
+            :class="{ active: c === current }"
+            @click="current = c"
+          >
+            {{ c }}
+          </li>
+        </ul>
+
+        <form @submit.prevent="addChannel">
+          <input v-model="newChannel" placeholder="Ny kanal (Enter)">
+        </form>
+
+        <button @click="logout()">Logga ut</button>
+      </aside>
+
+      <main>
+        <h2>
+          # {{ current }}
+          <small class="error">{{ error }}</small>
+        </h2>
+
+        <div class="messages" ref="list">
+          <p v-for="(m, i) in messages" :key="m.id || i">
+            <b>{{ name(m) }}</b>: {{ m.body }}
+          </p>
+        </div>
+
+        <form class="composer" @submit.prevent="send">
+          <input v-model="draft" :placeholder="'Skriv i #' + current">
+          <button :disabled="busy">Skicka</button>
+        </form>
+      </main>
+    </template>
+
+  </div>
+</div>
+
+<script>
+const BFF = 'http://localhost:8080';
+
+Vue.createApp({
+  data() {
+    return {
+      token: localStorage.getItem('token'),
+
+      mode: 'login',
+      form: { displayName: '', email: '', password: '' },
+      error: '',
+      info: '',
+      busy: false,
+
+      channels: JSON.parse(localStorage.getItem('channels')) || ['general'],
+      current: 'general',
+      newChannel: '',
+
+      messages: [],
+      draft: '',
+
+      polling: false,
+      timer: null
+    };
+  },
+
+  watch: {
+    token: {
+      immediate: true,
+      handler(token) {
+        if (token) {
+          localStorage.setItem('token', token);
+          this.startPolling();
+        } else {
+          localStorage.removeItem('token');
+          clearInterval(this.timer);
+          this.messages = [];
+        }
+      }
+    },
+
+    channels: {
+      deep: true,
+      handler(list) {
+        localStorage.setItem('channels', JSON.stringify(list));
+      }
+    },
+
+    current() {
+      this.messages = [];
+      this.poll();
+    }
+  },
+
+  unmounted() {
+    clearInterval(this.timer);
+  },
+
+  methods: {
+    async api(path, method, body, auth) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (auth) headers.Authorization = 'Bearer ' + this.token;
+
+      const res = await fetch(BFF + path, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+      });
+
+      if (!res.ok) {
+        throw Object.assign(
+          new Error('serverfel ' + res.status),
+          { status: res.status }
+        );
+      }
+
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    },
+
+    fail(prefix, e) {
+      if (e.status === 401 && this.token) {
+        return this.logout('Sessionen har gått ut, logga in igen.');
+      }
+
+      const reason = e instanceof TypeError ? 'kan inte nå servern' : e.message;
+      this.error = prefix + reason;
+    },
+
+    toggleMode() {
+      this.mode = this.mode === 'login' ? 'register' : 'login';
+      this.error = '';
+      this.info = '';
+    },
+
+    async submitAuth() {
+      this.error = '';
+      this.info = '';
+
+      const displayName = this.form.displayName.trim();
+      const email = this.form.email.trim();
+      const password = this.form.password;
+      const registering = this.mode === 'register';
+
+      if (!email || !password || (registering && !displayName)) {
+        this.error = 'Fyll i alla fält.';
+        return;
+      }
+
+      this.busy = true;
+      try {
+        if (registering) {
+          await this.api('/bff/register', 'POST', { displayName, email, password });
+          this.mode = 'login';
+          this.info = 'Registrerad! Logga in nu.';
+        } else {
+          const data = await this.api('/bff/login', 'POST', { email, password });
+          if (!data?.token) throw new Error('svaret saknar token');
+          this.token = data.token;
+        }
+        this.form.password = '';
+      } catch (e) {
+        const prefix = registering ? 'Registrering misslyckades: ' : 'Inloggning misslyckades: ';
+        this.fail(prefix, e);
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    logout(message = '') {
+      this.error = '';
+      this.info = message;
+      this.token = null;
+    },
+
+    addChannel() {
+      const name = this.newChannel
+        .trim()
+        .toLowerCase()
+        .replace(/^#+/, '')
+        .replace(/\s+/g, '-');
+
+      this.newChannel = '';
+      if (!name) return;
+
+      if (!this.channels.includes(name)) this.channels.push(name);
+      this.current = name;
+    },
+
+    name(m) {
+      return m.senderName || m.senderId || 'okänd';
+    },
+
+    startPolling() {
+      clearInterval(this.timer);
+      this.poll();
+      this.timer = setInterval(this.poll, 2000);
+    },
+
+    async poll() {
+      if (!this.token || this.polling) return;
+
+      this.polling = true;
+      const channel = this.current;
+
+      try {
+        const url = '/bff/messages?channelId=' + encodeURIComponent(channel);
+        const list = await this.api(url, 'GET', null, true);
+        if (channel !== this.current) return;
+
+        const el = this.$refs.list;
+        const atBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+
+        this.messages = Array.isArray(list) ? list : [];
+        this.error = '';
+
+        if (atBottom) this.scrollDown();
+      } catch (e) {
+        this.fail('Kunde inte hämta meddelanden: ', e);
+      } finally {
+        this.polling = false;
+      }
+    },
+
+    async send() {
+      const body = this.draft.trim();
+      if (!body || this.busy) return;
+
+      this.busy = true;
+      try {
+        await this.api('/bff/messages', 'POST', { channelId: this.current, body }, true);
+        this.draft = '';
+        this.error = '';
+
+        await this.poll();
+        this.scrollDown();
+      } catch (e) {
+        this.fail('Kunde inte skicka: ', e);
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    scrollDown() {
+      this.$nextTick(() => {
+        const el = this.$refs.list;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
