@@ -1,8 +1,8 @@
 # Chat Lab
 
-A distributed chat application built as independent microservices with Spring Boot. External clients talk REST to a BFF, the services talk to each other over REST and gRPC, and new messages are published as events to RabbitMQ. Authentication uses JWT.
+A simple distributed chat application built as independent microservices with Spring Boot. External clients talk REST to BFF, the<br>
+services talk to each other over REST and gRPC, and new messages are published as events to RabbitMQ. Authentication uses JWT.
 
-Built for *Laboration 2 – Microservices and distributed systems*.
 
 ## Architecture
 
